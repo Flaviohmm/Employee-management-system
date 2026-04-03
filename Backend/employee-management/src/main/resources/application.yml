@@ -22,5 +22,8 @@ spring:
     cors:
       allowed-origins: http://localhost:5173
 
+  jackson:
+    time-zone: America/Recife
+
 server:
   port:8080

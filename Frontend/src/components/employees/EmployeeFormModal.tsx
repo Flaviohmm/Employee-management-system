@@ -17,10 +17,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { DEPARTMENTS, POSITIONS, type Employee } from '@/types/employee';
+import { Employee } from '@/services/employeeService';
+import { useEffect } from 'react';
 
 const employeeSchema = z.object({
-    fullName: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100),
+    firstName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(50),
+    lastName: z.string().min(2, 'Sobrenome deve ter no mínimo 2 caracteres').max(50),
     email: z.string().email('Email inválido').max(255),
     department: z.string().min(1, 'Selecione um departamento'),
     position: z.string().min(1, 'Selecione um cargo'),
@@ -46,28 +48,65 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
         formState: { errors, isSubmitting },
     } = useForm<EmployeeFormData>({
         resolver: zodResolver(employeeSchema),
-        defaultValues: employee
-            ? {
-                fullName: employee.fullName,
-                email: employee.email,
-                department: employee.department,
-                position: employee.position,
-                salary: employee.salary,
-                hireDate: employee.hireDate,
+        defaultValues: {
+            firstName: '',
+            lastName: '',
+            email: '',
+            department: '',
+            position: '',
+            salary: 0,
+            hireDate: '',
+        },
+    });
+
+    // Preenche o formulário quando estiver em modo de edição
+    useEffect(() => {
+        if (employee) {
+            const firstName = employee.firstName || (employee.fullName?.split(' ')[0] || '');
+            const lastName = employee.lastName || (employee.fullName?.split(' ').slice(1).join(' ') || '');
+
+            // Formata a data corretamente para o input type="date"
+            let formattedHireDate = "";
+            if (employee.hireDate) {
+                // Remove hora caso venha como ISO (ex: 2025-03-15T00:00:00)
+                formattedHireDate = employee.hireDate.split('T')[0];
             }
-            : {
-                fullName: '',
+
+            reset({
+                firstName,
+                lastName,
+                email: employee.email,
+                department: employee.department || '',
+                position: employee.position || '',
+                salary: employee.salary,
+                hireDate: formattedHireDate,
+            });
+        } else {
+            reset({
+                firstName: '',
+                lastName: '',
                 email: '',
                 department: '',
                 position: '',
                 salary: 0,
                 hireDate: '',
-            },
-    });
+            });
+        }
+    }, [employee, reset])
 
     const handleFormSubmit = (data: EmployeeFormData) => {
-        onSubmit(data);
-        reset();
+        // Converte para o formato esperado pelo backend
+        const submitData = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            department: data.department,
+            position: data.position,
+            salary: data.salary,
+            hireData: data.hireDate,
+        };
+
+        onSubmit(submitData);
         onClose();
     };
 
@@ -80,12 +119,29 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 pt-2">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="fullName">Nome Completo</Label>
-                        <Input id="fullName" {...register('fullName')} placeholder="Ex: João Silva" />
-                        {errors.fullName && (
-                            <p className="text-sm text-destructive">{errors.fullName.message}</p>
-                        )}
+                    <div className='grid grid-cols-2 gap-4'>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="firstName">Nome</Label>
+                            <Input
+                                id="firstName"
+                                {...register('firstName')}
+                                placeholder="Ex: João"
+                            />
+                            {errors.firstName && (
+                                <p className="text-sm text-destructive">{errors.firstName.message}</p>
+                            )}
+                        </div>
+                        <div className='space-y-1.5'>
+                            <Label htmlFor="lastName">Sobrenome</Label>
+                            <Input
+                                id="lastName"
+                                {...register('lastName')}
+                                placeholder="Silva"
+                            />
+                            {errors.lastName && (
+                                <p className="text-sm text-destructive">{errors.lastName.message}</p>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -104,12 +160,21 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
                                 onValueChange={(v) => setValue('department', v, { shouldValidate: true })}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
+                                    <SelectValue placeholder="Selecione o departamento" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {DEPARTMENTS.map((d) => (
-                                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                                    ))}
+                                    {[
+                                        'Engenharia',
+                                        'Marketing',
+                                        'Vendas',
+                                        'RH',
+                                        'Financeiro',
+                                        'Operações',
+                                        'TI',
+                                        'Jurídico',].map((d) => (
+                                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                                        ))
+                                    }
                                 </SelectContent>
                             </Select>
                             {errors.department && (
@@ -124,12 +189,21 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
                                 onValueChange={(v) => setValue('position', v, { shouldValidate: true })}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
+                                    <SelectValue placeholder="Selecione o cargo" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {POSITIONS.map((p) => (
-                                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                                    ))}
+                                    {[
+                                        'Estagiário',
+                                        'Júnior',
+                                        'Pleno',
+                                        'Sênior',
+                                        'Tech Lead',
+                                        'Gerente',
+                                        'Diretor',
+                                        'VP',].map((p) => (
+                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                        ))
+                                    }
                                 </SelectContent>
                             </Select>
                             {errors.position && (

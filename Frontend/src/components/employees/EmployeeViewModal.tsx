@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { User, Mail, Building2, Briefcase, DollarSign, CalendarDays } from 'lucide-react';
-import type { Employee } from '@/types/employee';
+import { Employee } from '@/services/employeeService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -19,7 +19,15 @@ interface Props {
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) => (
+const DetailRow = ({ 
+    icon: Icon, 
+    label, 
+    children 
+}: { 
+    icon: React.ElementType; 
+    label: string; 
+    children: React.ReactNode 
+}) => (
     <div className="flex items-start gap-3 py-3">
         <div className="rounded-lg bg-primary/10 p-2">
             <Icon className="h-4 w-4 text-primary" />
@@ -41,7 +49,9 @@ const EmployeeViewModal = ({ open, onClose, employee }: Props) => {
                     <DialogTitle>Detalhes do Funcionário</DialogTitle>
                 </DialogHeader>
                 <div className="divide-y divide-border">
-                    <DetailRow icon={User} label="Nome Completo">{employee.fullName}</DetailRow>
+                    <DetailRow icon={User} label="Nome Completo">
+                        {employee.fullName || `${employee.firstName} ${employee.lastName}`}
+                    </DetailRow>
                     <DetailRow icon={Mail} label="Email">{employee.email}</DetailRow>
                     <DetailRow icon={Building2} label="Departamento">
                         <Badge variant="secondary">{employee.department}</Badge>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus, Search, Users, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,19 +14,23 @@ import EmployeeTable from '@/components/employees/EmployeeTable';
 import EmployeeFormModal from '@/components/employees/EmployeeFormModal';
 import EmployeeViewModal from '@/components/employees/EmployeeViewModal';
 import DeleteConfirmDialog from '@/components/employees/DeleteConfirmDialog';
-import { mockEmployees } from '@/data/mockEmployees';
-import { DEPARTMENTS, POSITIONS, type Employee, type SortConfig } from '@/types/employee';
+import { employeeService, Employee, SortConfig } from '@/services/employeeService';
 
 const PAGE_SIZES = [10, 20, 50];
 
 const Index = () => {
-    const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [loading, setLoading] = useState(true);
+
     const [search, setSearch] = useState('');
-    const [deptFilter, setDeptFilter] = useState('all');
-    const [posFilter, setPosFilter] = useState('all');
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(10);
-    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+
+    const [sortConfig, setSortConfig] = useState<SortConfig>({
+        key: 'id',
+        direction: 'asc'
+    });
+
     const [darkMode, setDarkMode] = useState(false);
 
     // Modals
@@ -36,43 +40,44 @@ const Index = () => {
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [editMode, setEditMode] = useState(false);
 
+    // Toggle Dark Mode
     const toggleDark = () => {
         setDarkMode((d) => !d);
         document.documentElement.classList.toggle('dark');
     };
 
+    // Carregar funcionários do Backend
+    const loadEmployees = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await employeeService.getAll(page, pageSize, search);
+            // Spring Boot retorna um objeto Page com "content"
+            setEmployees(data.content || data);
+        } catch (error) {
+            console.error("Erro ao carregar funcionários:", error);
+            toast.error("Erro ao carregar dados do servidor.");
+            setEmployees([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [page, pageSize, search]);
+
+    // Atualiza quando mudar página, tamanho ou busca
+    useEffect(() => {
+        loadEmployees();
+    }, [loadEmployees]);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setPage(0);
+    };
+
     const handleSort = useCallback((key: keyof Employee) => {
         setSortConfig((prev) => ({
             key,
-            direction: prev.key === key ? (prev.direction === 'asc' ? 'desc' : prev.direction === 'desc' ? null : 'asc') : 'asc',
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
         }));
     }, []);
-
-    const filtered = useMemo(() => {
-        let data = [...employees];
-
-        if (search) {
-            const q = search.toLowerCase();
-            data = data.filter((e) => e.fullName.toLowerCase().includes(q) || e.email.toLowerCase().includes(q));
-        }
-        if (deptFilter !== 'all') data = data.filter((e) => e.department === deptFilter);
-        if (posFilter !== 'all') data = data.filter((e) => e.position === posFilter);
-
-        if (sortConfig.key && sortConfig.direction) {
-            data.sort((a, b) => {
-                const aVal = a[sortConfig.key!];
-                const bVal = b[sortConfig.key!];
-                const mod = sortConfig.direction === 'asc' ? 1 : -1;
-                if (typeof aVal === 'string') return aVal.localeCompare(bVal as string) * mod;
-                return ((aVal as number) - (bVal as number)) * mod;
-            });
-        }
-
-        return data;
-    }, [employees, search, deptFilter, posFilter, sortConfig]);
-
-    const totalPages = Math.ceil(filtered.length / pageSize);
-    const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
     const handleAdd = () => {
         setSelectedEmployee(null);
@@ -96,24 +101,35 @@ const Index = () => {
         setDeleteOpen(true);
     };
 
-    const handleFormSubmit = (data: Omit<Employee, 'id'>) => {
-        if (editMode && selectedEmployee) {
-            setEmployees((prev) =>
-                prev.map((e) => (e.id === selectedEmployee.id ? { ...e, ...data } : e))
-            );
-            toast.success('Funcionário atualizado com sucesso!');
-        } else {
-            const newId = Math.max(...employees.map((e) => e.id), 0) + 1;
-            setEmployees((prev) => [...prev, { id: newId, ...data }]);
-            toast.success('Funcionário adicionado com sucesso!');
+    // Submit do formulário (Create / Update)
+    const handleFormSubmit = async (data: Omit<Employee, 'id'>) => {
+        try {
+            if (editMode && selectedEmployee) {
+                await employeeService.update(selectedEmployee.id, data);
+                toast.success('Funcionário atualizado com sucesso!');
+            } else {
+                await employeeService.create(data);
+                toast.success('Funcionário adicionado com sucesso!');
+            }
+            loadEmployees();
+            setFormOpen(false);
+        } catch (error) {
+            toast.error("Erro ao salvar funcionário.");
+            console.error(error);
         }
     };
 
-    const handleDeleteConfirm = () => {
-        if (selectedEmployee) {
-            setEmployees((prev) => prev.filter((e) => e.id !== selectedEmployee.id));
+    // Confirmar exclusão
+    const handleDeleteConfirm = async () => {
+        if (!selectedEmployee) return;
+
+        try {
+            await employeeService.delete(selectedEmployee.id);
             toast.success('Funcionário excluído com sucesso!');
+            loadEmployees(); // Recarrega após deletar
             setDeleteOpen(false);
+        } catch (error) {
+            toast.error("Erro ao excluir funcionário.");
         }
     };
 
@@ -128,7 +144,7 @@ const Index = () => {
                         </div>
                         <div>
                             <h1 className="text-lg font-bold tracking-tight text-foreground">Employee Manager</h1>
-                            <p className="text-xs text-muted-foreground">{filtered.length} funcionários</p>
+                            <p className="text-xs text-muted-foreground">{employees.length} funcionários</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -150,39 +166,20 @@ const Index = () => {
                         <Input
                             placeholder="Buscar por nome ou email..."
                             value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                            onChange={(e) => { 
+                                handleSearchChange(e.target.value)
+                            }}
                             className="pl-9"
                         />
                     </div>
-                    <Select value={deptFilter} onValueChange={(v) => { setDeptFilter(v); setPage(0); }}>
-                        <SelectTrigger className="w-full sm:w-44">
-                            <SelectValue placeholder="Departamento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos Departamentos</SelectItem>
-                            {DEPARTMENTS.map((d) => (
-                                <SelectItem key={d} value={d}>{d}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={posFilter} onValueChange={(v) => { setPosFilter(v); setPage(0); }}>
-                        <SelectTrigger className="w-full sm:w-36">
-                            <SelectValue placeholder="Cargo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos Cargos</SelectItem>
-                            {POSITIONS.map((p) => (
-                                <SelectItem key={p} value={p}>{p}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
 
             {/* Table */}
             <div className="container mx-auto px-4 pb-8 sm:px-6">
                 <EmployeeTable
-                    employees={paged}
+                    employees={employees}
+                    loading={loading}
                     sortConfig={sortConfig}
                     onSort={handleSort}
                     onView={handleView}
@@ -190,40 +187,25 @@ const Index = () => {
                     onDelete={handleDeleteClick}
                 />
 
-                {/* Pagination */}
-                <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Itens por página:</span>
-                        <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
-                            <SelectTrigger className="h-8 w-20">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PAGE_SIZES.map((s) => (
-                                    <SelectItem key={s} value={String(s)}>{s}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <span>
-                            {filtered.length > 0
-                                ? `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, filtered.length)} de ${filtered.length}`
-                                : '0 resultados'}
-                        </span>
-                    </div>
-                    <div className="flex gap-1">
-                        <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(0)}>
-                            ««
-                        </Button>
-                        <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                            ‹
-                        </Button>
-                        <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-                            ›
-                        </Button>
-                        <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>
-                            »»
-                        </Button>
-                    </div>
+                {/* Paginação simples - pode melhorar depois */}
+                <div className='mt-6 flex justify-center gap-2'>
+                    <Button
+                        variant='outline'
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={page === 0 || loading}
+                    >
+                        Anterior
+                    </Button>
+                    <span className='flex items-center px-4 text-sm text-muted-foreground'>
+                        Página {page + 1}
+                    </span>
+                    <Button
+                        variant='outline'
+                        onClick={() => setPage(p => p + 1)}
+                        disabled={loading}
+                    >
+                        Próxima
+                    </Button>
                 </div>
             </div>
 

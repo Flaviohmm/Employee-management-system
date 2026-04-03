@@ -8,7 +8,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { Employee } from '@/types/employee';
+import { Employee } from '@/services/employeeService';
 
 interface Props {
     open: boolean;

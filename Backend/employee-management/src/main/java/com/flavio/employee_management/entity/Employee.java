@@ -1,5 +1,6 @@
 package com.flavio.employee_management.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -43,6 +44,7 @@ public class Employee {
     @NotNull(message = "O salário é obrigatório")
     private Double salary;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate hireDate;
 
     // Nome completo calculado (conveniência)

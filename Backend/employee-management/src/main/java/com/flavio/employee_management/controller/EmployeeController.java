@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/employees")
-@CrossOrigin(origins = "http://localhost:5173")  // Permitir o React conectar
 public class EmployeeController {
 
     private final EmployeeService service;
