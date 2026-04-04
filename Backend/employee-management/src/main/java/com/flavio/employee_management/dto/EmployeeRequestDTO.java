@@ -1,5 +1,6 @@
 package com.flavio.employee_management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,5 +33,6 @@ public class EmployeeRequestDTO {
     @NotNull
     private Double salary;
 
+    @JsonFormat (pattern = "yyyy-MM-dd")
     private LocalDate hireDate;
 }

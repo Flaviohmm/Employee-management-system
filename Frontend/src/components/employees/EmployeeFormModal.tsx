@@ -64,14 +64,7 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
         if (employee) {
             const firstName = employee.firstName || (employee.fullName?.split(' ')[0] || '');
             const lastName = employee.lastName || (employee.fullName?.split(' ').slice(1).join(' ') || '');
-
-            // Formata a data corretamente para o input type="date"
-            let formattedHireDate = "";
-            if (employee.hireDate) {
-                // Remove hora caso venha como ISO (ex: 2025-03-15T00:00:00)
-                formattedHireDate = employee.hireDate.split('T')[0];
-            }
-
+            
             reset({
                 firstName,
                 lastName,
@@ -79,7 +72,7 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
                 department: employee.department || '',
                 position: employee.position || '',
                 salary: employee.salary,
-                hireDate: formattedHireDate,
+                hireDate: employee.hireDate,
             });
         } else {
             reset({
@@ -92,7 +85,7 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
                 hireDate: '',
             });
         }
-    }, [employee, reset])
+    }, [employee, reset]);
 
     const handleFormSubmit = (data: EmployeeFormData) => {
         // Converte para o formato esperado pelo backend
@@ -103,7 +96,7 @@ const EmployeeFormModal = ({ open, onClose, onSubmit, employee }: Props) => {
             department: data.department,
             position: data.position,
             salary: data.salary,
-            hireData: data.hireDate,
+            hireDate: data.hireDate,
         };
 
         onSubmit(submitData);

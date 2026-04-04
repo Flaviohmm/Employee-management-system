@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Employee, SortConfig } from "@/services/employeeService";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface EmployeeTableProps {
@@ -109,7 +109,11 @@ const EmployeeTable = ({
                                 </TableCell>
                                 <TableCell className="font-mono text-sm">{formatCurrency(emp.salary)}</TableCell>
                                 <TableCell className="text-muted-foreground text-sm">
-                                    {format(new Date(emp.hireDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                    {
+                                        emp.hireDate
+                                            ? format(parseISO(emp.hireDate), 'dd/MM/yyyy', { locale: ptBR })
+                                            : '------------'
+                                    }
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
