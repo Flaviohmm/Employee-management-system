@@ -3,6 +3,7 @@ package com.flavio.employee_management.controller;
 import com.flavio.employee_management.dto.EmployeeRequestDTO;
 import com.flavio.employee_management.dto.EmployeeResponseDTO;
 import com.flavio.employee_management.service.EmployeeService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +45,7 @@ public class EmployeeController {
         Page<EmployeeResponseDTO> employees = service.findAll(pageable, search);
         return ResponseEntity.ok(employees);
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<EmployeeResponseDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.findById(id));
@@ -60,5 +62,15 @@ public class EmployeeController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export/csv")
+    public void exportCsv(HttpServletResponse response) throws Exception {
+        service.exportToCsv(response);
+    }
+
+    @GetMapping("/export/excel")
+    public void exportExcel(HttpServletResponse response) throws Exception {
+        service.exportToExcel(response);
     }
 }
