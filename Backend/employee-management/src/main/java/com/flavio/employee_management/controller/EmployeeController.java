@@ -73,4 +73,9 @@ public class EmployeeController {
     public void exportExcel(HttpServletResponse response) throws Exception {
         service.exportToExcel(response);
     }
+
+    @GetMapping("/export/pdf")
+    public void exportPdf(HttpServletResponse response) throws Exception {
+        service.exportToPdf(response);
+    }
 }

@@ -4,6 +4,10 @@ import com.flavio.employee_management.dto.EmployeeRequestDTO;
 import com.flavio.employee_management.dto.EmployeeResponseDTO;
 import com.flavio.employee_management.entity.Employee;
 import com.flavio.employee_management.repository.EmployeeRepository;
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
 import com.opencsv.CSVWriter;
 import com.opencsv.bean.StatefulBeanToCsv;
 import com.opencsv.bean.StatefulBeanToCsvBuilder;
@@ -169,5 +173,53 @@ public class EmployeeService {
 
             workbook.write(response.getOutputStream());
         }
+    }
+
+    // Exportar para PDF
+    public void exportToPdf(HttpServletResponse response) throws Exception {
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=funcionarios.pdf");
+
+        Document document = new Document(PageSize.A4);
+        PdfWriter.getInstance(document, response.getOutputStream());
+        document.open();
+
+        // Título
+        com.itextpdf.text.Font titleFont = new com.itextpdf.text.Font(com.itextpdf.text.Font.FontFamily.HELVETICA, 18, com.itextpdf.text.Font.BOLD);
+        Paragraph title = new Paragraph("Relatório de Funcionários", titleFont);
+        title.setAlignment(Element.ALIGN_CENTER);
+        title.setSpacingAfter(20);
+        document.add(title);
+
+        // Tabela
+        PdfPTable table = new PdfPTable(7); // 7 colunas
+        table.setWidthPercentage(100);
+
+        // Cabeçalhos
+        com.itextpdf.text.Font headerFont = new com.itextpdf.text.Font(com.itextpdf.text.Font.FontFamily.HELVETICA, 12, com.itextpdf.text.Font.BOLD);
+        String[] headers = {"ID", "Nome Completo", "Email", "Departamento", "Cargo", "Salário (R$)", "Data de Contratação"};
+        for (String header: headers) {
+            PdfPCell cell = new PdfPCell(new Phrase(header, headerFont));
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+            table.addCell(cell);
+        }
+
+        // Dados
+        com.itextpdf.text.Font dataFont = new com.itextpdf.text.Font(com.itextpdf.text.Font.FontFamily.HELVETICA, 10);
+        List<Employee> employees = repository.findAll();
+
+        for (Employee emp : employees) {
+            table.addCell(new PdfPCell(new Phrase(emp.getId().toString(), dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getFullName(), dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getEmail(), dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getDepartment() != null ? emp.getDepartment() : "--------", dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getPosition() != null ? emp.getPosition() : "--------", dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getSalary() != null ? String.format("%.2f", emp.getSalary()) : "0.00", dataFont)));
+            table.addCell(new PdfPCell(new Phrase(emp.getHireDate() != null ? emp.getHireDate().toString() : "--------", dataFont)));
+        }
+
+        document.add(table);
+        document.close();
     }
 }

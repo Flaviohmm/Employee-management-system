@@ -22,7 +22,7 @@ import {
     Eye,
     Pencil,
     Trash2,
-    Download,
+    Printer,
     FileText,
     FileSpreadsheet
 } from 'lucide-react';
@@ -73,6 +73,19 @@ const exportToExcel = async () => {
         saveAs(response.data, 'funcionarios.xlsx');
     } catch (error) {
         alert('Erro ao exportar Excel');
+    }
+};
+
+const exportToPDF = async () => {
+    try {
+        const response = await axios.get('http://localhost:8080/api/employees/export/pdf', {
+            responseType: 'blob'
+        });
+
+        saveAs(response.data, 'funcionarios.pdf');
+    } catch (error) {
+        console.error('Erro ao gerar PDF: ', error);
+        alert('Erro ao exportar o PDF. Verifique seu backend.');
     }
 };
 
@@ -191,6 +204,13 @@ const EmployeeTable = ({
                 >   
                     <FileSpreadsheet size={20} />
                     Exportar Excel
+                </button>
+                <button
+                    onClick={exportToPDF}
+                    className="flex items-center gap-2 font-medium bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition"
+                >
+                    <Printer size={20} />
+                    Exportar PDF
                 </button>
             </div>
         </div>
